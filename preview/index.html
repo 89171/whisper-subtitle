@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whisper LRC Player</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --border: #27272a;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.3), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(139, 92, 246, 0.15), transparent);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 32px;
+            padding: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .player-section {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .album-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .album-art {
+            width: 280px;
+            height: 280px;
+            border-radius: 16px;
+            background: linear-gradient(145deg, #1f1f2e, #2a2a3d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .album-art::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, var(--accent), transparent, var(--accent), transparent);
+            animation: rotate 8s linear infinite;
+            opacity: 0.1;
+        }
+
+        @keyframes rotate {
+            to { transform: rotate(360deg); }
+        }
+
+        .album-art-inner {
+            width: 160px;
+            height: 160px;
+            background: var(--bg-secondary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .album-art-inner svg {
+            width: 64px;
+            height: 64px;
+            color: var(--text-muted);
+        }
+
+        .album-art.playing .album-art-inner {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .song-info {
+            text-align: center;
+        }
+
+        .song-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .song-artist {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .progress-section {
+            width: 100%;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #8b5cf6);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .progress-bar:hover .progress-fill {
+            background: linear-gradient(90deg, #818cf8, #a78bfa);
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background: var(--bg-card);
+            transform: scale(1.05);
+        }
+
+        .control-btn.play-btn {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            box-shadow: 0 8px 32px var(--accent-glow);
+        }
+
+        .control-btn.play-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 12px 40px var(--accent-glow);
+        }
+
+        .control-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .control-btn.play-btn svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .player-extra {
+            display: flex;
+            gap: 24px;
+            margin-top: 16px;
+            justify-content: center;
+        }
+
+        .extra-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .extra-control svg {
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+        }
+
+        .extra-slider {
+            width: 80px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: var(--bg-secondary);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .extra-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            cursor: pointer;
+        }
+
+        #speedLabel {
+            font-size: 11px;
+            color: var(--text-muted);
+            min-width: 28px;
+        }
+
+        .lyrics-section {
+            background: var(--bg-card);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+            max-height: 800px;
+        }
+
+        .lyrics-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lyrics-header svg {
+            width: 20px;
+            height: 20px;
+            color: var(--accent);
+        }
+
+        .lyrics-header h2 {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .lyrics-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            scroll-behavior: smooth;
+        }
+
+        .lyrics-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .lyrics-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .lyrics-content::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .lyric-line {
+            padding: 12px 16px;
+            margin: 4px 0;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .lyric-line:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .lyric-line.active {
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 500;
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid var(--accent);
+        }
+
+        .lyric-line.passed {
+            color: var(--text-muted);
+        }
+
+        .empty-lyrics {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            text-align: center;
+            gap: 16px;
+        }
+
+        .empty-lyrics svg {
+            width: 48px;
+            height: 48px;
+            opacity: 0.5;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .file-input-label:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .file-input-label svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .file-input-label input {
+            display: none;
+        }
+
+        .file-name {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .lyrics-section {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <div class="app">
+        <header>
+            <div class="logo">♪</div>
+            <h1>Whisper LRC Player</h1>
+        </header>
+
+        <main class="main-content">
+            <section class="player-section">
+                <div class="album-card">
+                    <div class="album-art" id="albumArt">
+                        <div class="album-art-inner">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M9 18V5l12-2v13"/>
+                                <circle cx="6" cy="18" r="3"/>
+                                <circle cx="18" cy="16" r="3"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="song-info">
+                        <div class="song-title" id="songTitle">选择音频文件播放</div>
+                        <div class="song-artist" id="songArtist">支持 MP3 文件</div>
+                    </div>
+
+                    <div class="progress-section">
+                        <div class="progress-bar" id="progressBar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="time-display">
+                            <span id="currentTime">0:00</span>
+                            <span id="duration">0:00</span>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button class="control-btn" id="prevBtn" title="上一句">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                            </svg>
+                        </button>
+                        <button class="control-btn play-btn" id="playBtn" title="播放/暂停">
+                            <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                        <button class="control-btn" id="nextBtn" title="下一句">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="player-extra">
+                        <div class="extra-control">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            </svg>
+                            <input type="range" class="extra-slider" id="volumeSlider" min="0" max="1" step="0.01" value="1">
+                        </div>
+                        <div class="extra-control">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <input type="range" class="extra-slider" id="speedSlider" min="0.5" max="2" step="0.1" value="1">
+                            <span id="speedLabel">1.0x</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="file-input-wrapper">
+                    <label class="file-input-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18V5l12-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="18" cy="16" r="3"/>
+                        </svg>
+                        <span>选择 MP3 文件</span>
+                        <input type="file" id="audioFile" accept="audio/mp3,audio/mpeg,.mp3">
+                    </label>
+                    <label class="file-input-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                        <span>选择 LRC 文件</span>
+                        <input type="file" id="lrcFile" accept=".lrc,text/plain">
+                    </label>
+                </div>
+            </section>
+
+            <section class="lyrics-section">
+                <div class="lyrics-header">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
+                    </svg>
+                    <h2>同步歌词</h2>
+                </div>
+                <div class="lyrics-content" id="lyricsContent">
+                    <div class="empty-lyrics">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9 18V5l12-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="18" cy="16" r="3"/>
+                        </svg>
+                        <span>加载 MP3 和 LRC 文件<br>歌词将自动滚动</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioFileInput = document.getElementById('audioFile');
+        const lrcFileInput = document.getElementById('lrcFile');
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const lyricsContent = document.getElementById('lyricsContent');
+        const albumArt = document.getElementById('albumArt');
+        const songTitle = document.getElementById('songTitle');
+        const songArtist = document.getElementById('songArtist');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        let lyrics = [];
+        let currentLyricIndex = -1;
+
+        const playPath = 'M8 5v14l11-7z';
+        const pausePath = 'M6 4h4v16H6V4zm8 0h4v16h-4V4z';
+
+        audioFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                audioPlayer.src = url;
+                const name = file.name.replace(/\.[^/.]+$/, '');
+                songTitle.textContent = name;
+                songArtist.textContent = '本地文件';
+                audioPlayer.play();
+                updatePlayState(true);
+            }
+        });
+
+        lrcFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    parseLRC(e.target.result);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function parseLRC(text) {
+            lyrics = [];
+            const lines = text.split('\n');
+
+            let title = '';
+            let artist = '';
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                const metaMatch = line.match(/\[(ti|ar|al):([^\]]+)\]/);
+                if (metaMatch) {
+                    if (metaMatch[1] === 'ti') title = metaMatch[2];
+                    if (metaMatch[1] === 'ar') artist = metaMatch[2];
+                    return;
+                }
+
+                const timeMatches = line.matchAll(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/g);
+                for (const match of timeMatches) {
+                    const minutes = parseInt(match[1]);
+                    const seconds = parseInt(match[2]);
+                    const ms = match[3].length === 2 ? parseInt(match[3]) * 10 : parseInt(match[3]);
+                    const time = minutes * 60 + seconds + ms / 1000;
+                    const text = match[4].trim();
+                    if (text) {
+                        lyrics.push({ time, text });
+                    }
+                }
+            });
+
+            lyrics.sort((a, b) => a.time - b.time);
+
+            if (title) songTitle.textContent = title;
+            if (artist) songArtist.textContent = artist;
+
+            renderLyrics();
+        }
+
+        function renderLyrics() {
+            if (lyrics.length === 0) {
+                lyricsContent.innerHTML = `
+                    <div class="empty-lyrics">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9 18V5l12-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="18" cy="16" r="3"/>
+                        </svg>
+                        <span>歌词已加载，等待播放</span>
+                    </div>
+                `;
+                return;
+            }
+
+            lyricsContent.innerHTML = lyrics.map((line, i) =>
+                `<div class="lyric-line" data-index="${i}" data-time="${line.time}">${escapeHtml(line.text)}</div>`
+            ).join('');
+
+            document.querySelectorAll('.lyric-line').forEach(el => {
+                el.addEventListener('click', () => {
+                    const time = parseFloat(el.dataset.time);
+                    audioPlayer.currentTime = time;
+                    if (audioPlayer.paused) {
+                        audioPlayer.play();
+                        updatePlayState(true);
+                    }
+                });
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateLyrics() {
+            const currentTime = audioPlayer.currentTime;
+            const lyricElements = lyricsContent.querySelectorAll('.lyric-line');
+
+            let newIndex = -1;
+            for (let i = lyrics.length - 1; i >= 0; i--) {
+                if (currentTime >= lyrics[i].time) {
+                    newIndex = i;
+                    break;
+                }
+            }
+
+            if (newIndex !== currentLyricIndex) {
+                lyricElements.forEach((el, i) => {
+                    el.classList.remove('active', 'passed');
+                    if (i < newIndex) el.classList.add('passed');
+                    else if (i === newIndex) el.classList.add('active');
+                });
+
+                if (newIndex >= 0) {
+                    const activeEl = lyricsContent.querySelector('.lyric-line.active');
+                    if (activeEl) {
+                        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+
+                currentLyricIndex = newIndex;
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updatePlayState(playing) {
+            if (playing) {
+                playIcon.innerHTML = `<path d="${pausePath}"/>`;
+                albumArt.classList.add('playing');
+            } else {
+                playIcon.innerHTML = `<path d="${playPath}"/>`;
+                albumArt.classList.remove('playing');
+            }
+        }
+
+        playBtn.addEventListener('click', () => {
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                updatePlayState(true);
+            } else {
+                audioPlayer.pause();
+                updatePlayState(false);
+            }
+        });
+
+        audioPlayer.addEventListener('timeupdate', () => {
+            if (audioPlayer.duration) {
+                const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                progressFill.style.width = `${percent}%`;
+                currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+                updateLyrics();
+            }
+        });
+
+        audioPlayer.addEventListener('loadedmetadata', () => {
+            durationEl.textContent = formatTime(audioPlayer.duration);
+        });
+
+        audioPlayer.addEventListener('ended', () => {
+            updatePlayState(false);
+        });
+
+        progressBar.addEventListener('click', (e) => {
+            const rect = progressBar.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            audioPlayer.currentTime = percent * audioPlayer.duration;
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            audioPlayer.volume = e.target.value;
+        });
+
+        const speedSlider = document.getElementById('speedSlider');
+        const speedLabel = document.getElementById('speedLabel');
+
+        speedSlider.addEventListener('input', (e) => {
+            const speed = parseFloat(e.target.value);
+            audioPlayer.playbackRate = speed;
+            speedLabel.textContent = speed.toFixed(1) + 'x';
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentLyricIndex > 0) {
+                audioPlayer.currentTime = lyrics[currentLyricIndex - 1].time;
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentLyricIndex < lyrics.length - 1) {
+                audioPlayer.currentTime = lyrics[currentLyricIndex + 1].time;
+            }
+        });
+    </script>
+</body>
+</html>
