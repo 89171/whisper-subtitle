@@ -74,39 +74,34 @@ python lrc_automaker.py <mp3文件> <歌词文件> [输出文件] [模型大小]
 | `<mp3文件>` | 输入的 MP3 音频文件 | 必需 |
 | `<歌词文件>` | 歌词文本文件（每行一句） | 必需 |
 | `[输出文件]` | 生成的 LRC 文件路径 | `<mp3文件>.lrc` |
-| `[模型大小]` | Whisper 模型: base/small/medium/large | base |
+| `[模型大小]` | Whisper 模型: base/small/medium/large | large |
 
 ### 模型选择指南
 
-> **推荐**: 建议使用 `medium` 或 `large` 模型以获得更准确的时间戳和识别效果。
+> **推荐**: 默认使用 `large` 模型以获得最佳的时间戳和识别效果。
 
 | 模型 | 精度 | 速度 | 内存需求 | 推荐场景 |
 |------|------|------|----------|----------|
 | base | 一般 | 最快 | ~1GB | 快速测试 |
 | small | 较好 | 快 | ~2GB | 日常使用 |
 | medium | 很好 | 较慢 | ~5GB | **日常推荐** |
-| large | 最佳 | 慢 | ~10GB | 最高精度需求 |
+| large | 最佳 | 慢 | ~10GB | **默认推荐** |
 
 ### 使用示例
 
-**示例 1：基本用法**
+**示例 1：基本用法（默认 large 模型）**
 ```bash
 python lrc_automaker.py song.mp3 lyrics.txt song.lrc
 ```
 
-**示例 2：使用更高精度模型**
-```bash
-python lrc_automaker.py song.mp3 lyrics.txt song.lrc small
-```
-
-**示例 3：使用 medium 模型获得最佳效果**
+**示例 2：使用 medium 模型**
 ```bash
 python lrc_automaker.py song.mp3 lyrics.txt song.lrc medium
 ```
 
-**示例 4：使用 large 模型（最高精度）**
+**示例 3：使用 small 模型（快速测试）**
 ```bash
-python lrc_automaker.py song.mp3 lyrics.txt song.lrc large
+python lrc_automaker.py song.mp3 lyrics.txt song.lrc small
 ```
 
 ## 歌词文件格式
@@ -166,7 +161,7 @@ pip install mcp openai-whisper torch
 | `mp3_path` | string | MP3 音频文件的绝对路径（必需） |
 | `lyrics_path` | string | 歌词文件路径（可选），不提供则直接从音频识别 |
 | `output_path` | string | 输出 LRC 文件路径（可选） |
-| `model_size` | string | Whisper 模型: base/small/medium/large（默认: base） |
+| `model_size` | string | Whisper 模型: base/small/medium/large（默认: large） |
 
 **使用示例:**
 ```
