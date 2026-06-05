@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
+import logging
+import sys
 from typing import Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from mcp.types import TextContent, Tool
 
-from lrc_automaker import generate_lrc
+from lrc_automaker import generate_lrc, setup_logging
 
+setup_logging()
+logger = logging.getLogger("mcp_server")
 
 server = Server("whisper-lrc-generator")
 
@@ -34,8 +38,31 @@ async def list_tools() -> list[Tool]:
                     },
                     "model_size": {
                         "type": "string",
-                        "description": "Whisper 模型: base/small/medium/large",
+                        "description": "Whisper 模型: tiny/base/small/medium/large",
                         "default": "large"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "歌曲标题（LRC 元信息，可选）"
+                    },
+                    "artist": {
+                        "type": "string",
+                        "description": "歌手名（LRC 元信息，可选）"
+                    },
+                    "album": {
+                        "type": "string",
+                        "description": "专辑名（LRC 元信息，可选）"
+                    },
+                    "separate": {
+                        "type": "boolean",
+                        "description": "是否用 demucs 分离人声与伴奏后再识别（需安装 demucs）",
+                        "default": false
+                    },
+                    "language": {
+                        "type": "string",
+                        "enum": ["auto", "zh", "en"],
+                        "description": "语言: zh=中文(FunASR), en=英文(Whisper), auto=自动(默认)",
+                        "default": "auto"
                     }
                 },
                 "required": ["mp3_path"]
@@ -52,12 +79,22 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     mp3_path = arguments["mp3_path"]
     lyrics_path = arguments.get("lyrics_path")
     output_path = arguments.get("output_path")
-    model_size = arguments.get("model_size", "base")
+    model_size = arguments.get("model_size", "large")
+
+    from lrc_automaker import LrcMeta
+    meta = LrcMeta(
+        title=arguments.get("title"),
+        artist=arguments.get("artist"),
+        album=arguments.get("album"),
+    )
+    separate = arguments.get("separate", False)
+    language = arguments.get("language", "auto")
 
     try:
-        result_path = generate_lrc(mp3_path, lyrics_path, output_path, model_size)
+        result_path = generate_lrc(mp3_path, lyrics_path, output_path, model_size, meta=meta, separate=separate, language=language)
         return [TextContent(type="text", text=f"LRC 文件已生成: {result_path}")]
     except Exception as e:
+        logger.error("生成 LRC 失败: %s", e)
         return [TextContent(type="text", text=f"生成 LRC 文件失败: {str(e)}")]
 
 
