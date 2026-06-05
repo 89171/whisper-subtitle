@@ -1,6 +1,8 @@
 # Whisper LRC Generator
 
-使用 OpenAI Whisper 自动将 MP3 音频对齐歌词，生成 LRC 格式歌词文件。
+[English](README_en.md)
+
+自动生成 LRC 歌词文件：Whisper AI 识别 MP3 音频，对齐歌词文本，生成带时间戳的 LRC。
 
 ## 功能特点
 
