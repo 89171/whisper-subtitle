@@ -2,7 +2,7 @@
 
 [English](README_en.md)
 
-自动生成 LRC 歌词文件：Whisper AI 识别 MP3 音频，对齐歌词文本，生成带时间戳的 LRC。
+自动生成 LRC 歌词文件：Whisper AI 识别 MP3 音频，生成带时间戳的 LRC， 如果提供了歌词可以通过给定歌词进行生成。
 
 ## 功能特点
 
