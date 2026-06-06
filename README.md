@@ -1,4 +1,4 @@
-# Whisper LRC Generator
+# LRC Generator
 
 [English](README_en.md)
 
