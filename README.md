@@ -1,105 +1,110 @@
-# LRC Generator
+# Whisper LRC Generator
 
-[English](README_en.md)
+[中文](README_zh.md)
 
-自动生成 LRC 歌词文件：Whisper AI 识别 MP3 音频，生成带时间戳的 LRC， 如果提供了歌词可以通过给定歌词进行生成。
+Auto-generate LRC lyric files from MP3 audio using OpenAI Whisper.
 
-## 功能特点
+## Features
 
-- **Whisper 语音识别** — 默认 `large-v3` 模型，中文识别大幅优于旧版；支持 `tiny` ~ `turbo` 多级精度
-- **语言提示** — `--language zh` 传参给 Whisper 提升中文识别；`auto` 根据歌词自动检测
-- **歌词合并** — 同一时间戳的连续歌词自动合并为一行，空格分隔
-- **AI 人声分离** — 支持 `--separate` 用 demucs 提取人声后再识别，降低乐器干扰
-- **DTW 全局对齐** — 有歌词时用动态时间规整 + 拼音相似度做全局最优匹配
-- **自动安装依赖** — demucs 首次使用时自动 `pip install`；ffmpeg 运行前检测
-- **模型缓存复用** — 多次运行复用已加载的模型
-- **批量处理** — `--batch` 批量处理整个目录
-- **LRC 元信息** — 支持 `[ti:]`、`[ar:]`、`[al:]` 标签
-- **Web 播放器** — `preview/index.html` 支持 LRC 同步展示
-- **MCP 支持** — 提供 MCP 服务器供 AI 助手调用
+- **Whisper ASR** — Default `large-v3` model with excellent Chinese recognition; supports `tiny` ~ `turbo`
+- **Language hint** — `--language zh` passes hint to Whisper; `auto` detects from lyrics
+- **Lyric merging** — Consecutive lyrics at identical timestamps are merged into one line
+- **Vocal separation** — `--separate` extracts vocals with demucs; `--save-vocals` keeps the vocal track
+- **DTW alignment** — Global optimal alignment via dynamic time warping + pinyin similarity for Chinese
+- **Auto-install** — demucs automatically installed on first use; ffmpeg checked at startup
+- **Model caching** — Whisper models are cached across runs
+- **Batch processing** — `--batch` processes all MP3s in a directory
+- **LRC metadata** — Supports `[ti:]`, `[ar:]`, `[al:]` tags
+- **Web editor** — `edit/index.html` LRC editor with playback and editing
+- **MCP support** — MCP server for AI assistant integration
 
-## 环境要求
+## Prerequisites
 
 - Python 3.8+
 - ffmpeg
-- PyTorch（Whisper 依赖）
+- PyTorch (Whisper dependency)
 
-### 安装
+### Installation
 
 ```bash
-brew install ffmpeg                # macOS
-sudo apt install ffmpeg            # Linux
+brew install ffmpeg                     # macOS
+sudo apt install ffmpeg                 # Linux
 pip install openai-whisper torch mcp pypinyin
 ```
 
-## 使用方法
+## Usage
 
 ```bash
-# 纯音频识别
+# Audio only (no lyrics)
 python lrc_automaker.py song.mp3
 
-# 带歌词对齐
+# With lyric file
 python lrc_automaker.py song.mp3 lyrics.txt
 
-# 中文歌曲（推荐）
+# Chinese songs (recommended)
 python lrc_automaker.py song.mp3 lyrics.txt --language zh
 
-# 人声分离（带伴奏的歌曲）
+# Vocal separation
 python lrc_automaker.py song.mp3 lyrics.txt --separate
 
-# 批量处理
-python lrc_automaker.py /path/to/music/dir --batch
+# Vocal separation + save vocal track
+python lrc_automaker.py song.mp3 lyrics.txt --separate --save-vocals
+
+# Batch processing
+python lrc_automaker.py /path/to/music --batch
 ```
 
-### 全部参数
+### All options
 
-| 参数 | 说明 | 默认 |
-|------|------|------|
-| `input` | MP3 文件或目录（配合 --batch） | 必需 |
-| `lyrics_file` | 歌词文本（每行一句） | — |
-| `output_file` | 输出 LRC 路径 | `<input>.lrc` |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `input` | MP3 file or directory (with --batch) | required |
+| `lyrics_file` | Lyric text file (one line per sentence) | — |
+| `output_file` | Output LRC path | `<input>.lrc` |
 | `--whisper-model` | tiny/base/small/medium/large/large-v3/turbo | large-v3 |
-| `--language`, `-l` | zh/en/auto（传给 Whisper） | auto |
-| `--title`, `-t` | 歌曲标题 | — |
-| `--artist`, `-a` | 歌手名 | — |
-| `--album`, `-al` | 专辑名 | — |
-| `--separate`, `-s` | AI 人声分离（首次自动安装 demucs） | — |
-| `--batch`, `-b` | 批量模式 | — |
-| `--output-dir`, `-o` | 批量输出目录 | 同输入目录 |
-| `--verbose`, `-v` | 详细日志 | — |
+| `--language`, `-l` | zh/en/auto (hint to Whisper) | auto |
+| `--title`, `-t` | Song title (LRC metadata) | — |
+| `--artist`, `-a` | Artist name | — |
+| `--album`, `-al` | Album name | — |
+| `--separate`, `-s` | Vocal separation (auto-installs demucs) | — |
+| `--save-vocals` | Save vocal track as `<mp3>.vocals.wav` | — |
+| `--batch`, `-b` | Batch mode | — |
+| `--output-dir`, `-o` | Batch output directory | same as input |
+| `--verbose`, `-v` | Verbose logging | — |
 
-## 工作原理
+## How it works
 
 ```
-MP3 → [--separate] demucs 人声分离 → ffmpeg 16kHz WAV
-     → Whisper 语音识别 → [{start, text}, ...] 片段
-     → [有歌词] 拼音化 + DTW 全局对齐 → 同时间戳行自动合并
-     → 写入 .lrc
+MP3 → [--separate] demucs vocal isolation → ffmpeg 16kHz WAV
+     → Whisper speech recognition → [{start, text}, ...] segments
+     → [has lyrics] pinyin + DTW global alignment → merge same-timestamp lines
+     → write .lrc
 ```
 
 ## MCP Server
 
-将 `mcp_config.json` 加入 AI 客户端 MCP 配置即可调用 `generate_lrc`。
+Add `mcp_config.json` to your AI client's MCP configuration to use the `generate_lrc` tool.
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `mp3_path` | string | MP3 绝对路径（必需） |
-| `lyrics_path` | string | 歌词文件路径 |
-| `output_path` | string | 输出路径 |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mp3_path` | string | Absolute path to MP3 (required) |
+| `lyrics_path` | string | Path to lyric file |
+| `output_path` | string | Output path |
 | `model_size` | string | tiny/base/small/medium/large/large-v3/turbo |
-| `title` | string | LRC 标题 |
-| `artist` | string | LRC 歌手 |
-| `album` | string | LRC 专辑 |
-| `separate` | boolean | 人声分离 |
+| `title` | string | LRC title |
+| `artist` | string | LRC artist |
+| `album` | string | LRC album |
+| `separate` | boolean | Enable vocal separation |
+| `save_vocals` | boolean | Save vocal track |
 | `language` | string | auto/zh/en |
 
-## 项目结构
+## Project structure
 
 ```
-├── lrc_automaker.py    # 主程序
-├── mcp_server.py       # MCP 服务器
-├── mcp_config.json     # MCP 配置
-├── preview/index.html  # Web 播放器
+├── lrc_automaker.py    # Main program
+├── mcp_server.py       # MCP server
+├── mcp_config.json     # MCP configuration
+├── edit/index.html     # Web editor
 └── requirements.txt
 ```
 

@@ -58,6 +58,11 @@ async def list_tools() -> list[Tool]:
                         "description": "是否用 demucs 分离人声与伴奏后再识别（需安装 demucs）",
                         "default": false
                     },
+                    "save_vocals": {
+                        "type": "boolean",
+                        "description": "将分离后的人声保存为 <mp3>.vocals.wav",
+                        "default": false
+                    },
                     "language": {
                         "type": "string",
                         "enum": ["auto", "zh", "en"],
@@ -88,10 +93,11 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         album=arguments.get("album"),
     )
     separate = arguments.get("separate", False)
+    save_vocals = arguments.get("save_vocals", False)
     language = arguments.get("language", "auto")
 
     try:
-        result_path = generate_lrc(mp3_path, lyrics_path, output_path, model_size, meta=meta, separate=separate, language=language)
+        result_path = generate_lrc(mp3_path, lyrics_path, output_path, model_size, meta=meta, separate=separate, language=language, save_vocals=save_vocals)
         return [TextContent(type="text", text=f"LRC 文件已生成: {result_path}")]
     except Exception as e:
         logger.error("生成 LRC 失败: %s", e)

@@ -343,6 +343,7 @@ def generate_lrc(
     progress_callback: Optional[Callable] = None,
     separate: bool = False,
     language: str = 'auto',
+    save_vocals: bool = False,
 ) -> str:
     mp3 = Path(mp3_path)
     if not mp3.exists():
@@ -372,6 +373,10 @@ def generate_lrc(
         vocal_wav = separate_vocals(str(mp3))
         vocab_stem_dir = str(Path(vocal_wav).parent.parent.parent)
         audio_source = vocal_wav
+        if save_vocals:
+            vocals_output = mp3.with_suffix('.vocals.wav')
+            shutil.copy(vocal_wav, vocals_output)
+            progress(f"人声已保存: {vocals_output}", 8)
 
     progress("正在转换音频格式...", 10)
     wav_path = convert_audio_to_whisper_wav(audio_source)
@@ -442,6 +447,7 @@ def batch_generate_lrc(
     whisper_model: str = 'large',
     separate: bool = False,
     language: str = 'auto',
+    save_vocals: bool = False,
 ) -> list[str]:
     src = Path(input_dir)
     if not src.is_dir():
@@ -471,6 +477,7 @@ def batch_generate_lrc(
                 whisper_model,
                 separate=separate,
                 language=language,
+                save_vocals=save_vocals,
             )
             results.append(result)
             logger.info("  -> %s", result)
@@ -506,6 +513,8 @@ def main():
                         help='语言提示: zh/en/auto，帮助 Whisper 更精准识别 (默认 auto)')
     parser.add_argument('--separate', '-s', action='store_true',
                         help='使用 demucs AI 分离人声与伴奏后再识别（需安装 demucs）')
+    parser.add_argument('--save-vocals', action='store_true',
+                        help='将分离后的人声保存为 <mp3>.vocals.wav')
     parser.add_argument('--verbose', '-v', action='store_true', help='显示详细日志')
     parser.add_argument('--output-dir', '-o', default=None,
                         help='批量模式下的输出目录（默认与输入目录相同）')
@@ -519,6 +528,7 @@ def main():
                 args.input, args.output_dir, args.whisper_model,
                 separate=args.separate,
                 language=args.language,
+                save_vocals=args.save_vocals,
             )
             if results:
                 logger.info("批量处理完成，共生成 %d 个 LRC 文件", len(results))
@@ -533,6 +543,7 @@ def main():
             meta=meta,
             separate=args.separate,
             language=args.language,
+            save_vocals=args.save_vocals,
         )
         logger.info("LRC 文件已生成: %s", output_path)
     except Exception as e:

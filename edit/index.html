@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LRC Editor</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #fafafa;
+  --bg2: #f3f3f3;
+  --bg3: #eee;
+  --border: #e0e0e0;
+  --border2: #ccc;
+  --text: #111;
+  --text2: #666;
+  --text3: #aaa;
+  --white: #fff;
+  --active-bg: #f0f0f0;
+  --active-border: #333;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 16px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 48px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--white);
+}
+.header-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+/* ── Player ── */
+.player {
+  height: 44px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 12px;
+  flex-shrink: 0;
+  background: var(--bg2);
+}
+.player-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.player-btn:hover { background: var(--bg3); }
+.player-btn svg { width: 13px; height: 13px; fill: currentColor; }
+
+.player-time { font-size: 13px; color: var(--text2); min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+
+.player-progress {
+  flex: 1; height: 4px;
+  background: var(--bg3);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.player-progress-fill { height: 100%; background: var(--text); border-radius: 2px; width: 0%; }
+
+.player-slider {
+  width: 70px; height: 4px;
+  -webkit-appearance: none; appearance: none;
+  background: var(--bg3); border-radius: 2px; cursor: pointer;
+}
+.player-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px; border-radius: 50%; background: var(--text);
+}
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 5px 24px;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  height: 34px;
+  flex-shrink: 0;
+  background: var(--white);
+}
+.tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+.tb-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text2);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tb-btn:hover { background: var(--bg3); color: var(--text); }
+.tb-btn.danger:hover { color: #d33; border-color: #d33; }
+
+/* ── File inputs ── */
+.file-label {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text2);
+  white-space: nowrap;
+  background: var(--white);
+}
+.file-label:hover { border-color: var(--text2); color: var(--text); }
+.file-label input { display: none; }
+
+.btn-export {
+  padding: 5px 14px;
+  border: 1px solid var(--text);
+  background: var(--text);
+  color: var(--white);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.btn-export:hover { opacity: 0.8; }
+
+/* ── Main layout ── */
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.editor-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Editor Table ── */
+.editor-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.editor-scroll::-webkit-scrollbar { width: 6px; }
+.editor-scroll::-webkit-scrollbar-track { background: transparent; }
+.editor-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.editor-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.editor-table th {
+  position: sticky; top: 0;
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  z-index: 2;
+}
+.editor-table th:nth-child(1) { width: 36px; text-align: center; }
+.editor-table th:nth-child(2) { width: 104px; }
+.editor-table th:nth-child(3) { }
+.editor-table th:nth-child(4) { width: 64px; text-align: center; }
+
+.editor-table td {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--bg3);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.editor-table tr { transition: background 0.1s; }
+.editor-table tr:hover { background: var(--bg3); }
+.editor-table tr.active td { font-weight: 600; }
+.editor-table tr.active { background: var(--active-bg); }
+.editor-table tr.active td:first-child { border-left: 2px solid var(--active-border); padding-left: 14px; }
+.editor-table tr.passed td { color: var(--text3); }
+
+.td-idx { text-align: center; color: var(--text3); font-size: 13px; user-select: none; }
+.td-time { font-family: 'SF Mono', 'Fira Code', monospace; color: var(--text2); font-size: 14px; cursor: pointer; }
+.td-text { cursor: pointer; }
+.td-actions { text-align: center; white-space: nowrap; }
+
+.td-time input, .td-text input {
+  background: var(--white);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font: inherit;
+  outline: none;
+}
+.td-time input { width: 90px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; }
+.td-text input { width: 100%; font-size: 15px; }
+.td-time input:focus, .td-text input:focus { border-color: var(--text2); }
+
+.action-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border: none; background: none;
+  color: var(--text3);
+  cursor: pointer;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+.action-btn:hover { background: var(--bg3); color: var(--text); }
+.action-btn.del:hover { color: #d33; }
+.action-btn svg { width: 14px; height: 14px; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 240px;
+  border-left: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: 20px 16px;
+  gap: 16px;
+  overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.side-block h4 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+.side-block p { font-size: 13px; color: var(--text2); line-height: 1.9; }
+.side-kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  background: var(--white);
+  margin: 0 2px;
+}
+
+/* ── Empty ── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: var(--text3); gap: 12px; font-size: 15px;
+}
+.empty-state svg { width: 40px; height: 40px; opacity: 0.3; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--white);
+  padding: 8px 20px; border-radius: 6px;
+  font-size: 14px; z-index: 100;
+  opacity: 0; transition: opacity 0.2s;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">&#9835; LRC Editor</div>
+  <div class="header-right">
+    <label class="file-label">+ MP3<input type="file" id="audioFile" accept="audio/mp3,audio/mpeg,.mp3"></label>
+    <label class="file-label">+ LRC<input type="file" id="lrcFile" accept=".lrc,text/plain"></label>
+    <button class="btn-export" id="btnExport">导出 LRC</button>
+  </div>
+</div>
+
+<div class="player">
+  <button class="player-btn" id="playBtn" title="播放/暂停">
+    <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <span class="player-time" id="currentTime">0:00</span>
+  <div class="player-progress" id="progressBar">
+    <div class="player-progress-fill" id="progressFill"></div>
+  </div>
+  <span class="player-time" id="duration">0:00</span>
+  <input type="range" class="player-slider" id="volumeSlider" min="0" max="1" step="0.01" value="1" title="音量">
+  <input type="range" class="player-slider" id="speedSlider" min="0.5" max="2" step="0.1" value="1" title="速度">
+  <span style="font-size:12px;color:var(--text3);min-width:28px" id="speedLabel">1.0x</span>
+</div>
+
+<div class="toolbar">
+  <button class="tb-btn" id="btnAddAbove">+ 上方</button>
+  <button class="tb-btn" id="btnAddBelow">+ 下方</button>
+  <button class="tb-btn danger" id="btnDelete">删除</button>
+  <span class="tb-sep"></span>
+  <button class="tb-btn" id="btnSetStamp">设为当前时间</button>
+</div>
+
+<div class="main">
+  <div class="editor-panel">
+    <div class="editor-scroll">
+      <table class="editor-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>时间</th>
+            <th>歌词</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="editorBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+        <span>加载 MP3 和 LRC 开始编辑</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="side-block">
+      <h4>当前歌词</h4>
+      <p id="sidebarCurrent">—</p>
+    </div>
+    <div class="side-block">
+      <h4>快捷键</h4>
+      <p><span class="side-kbd">Space</span> 播放/暂停</p>
+      <p><span class="side-kbd">↑ ↓</span> 上下选行</p>
+      <p><span class="side-kbd">Enter</span> 编辑歌词</p>
+      <p><span class="side-kbd">T</span> 设当前播放时间</p>
+      <p><span class="side-kbd">Delete</span> 删除行</p>
+    </div>
+    <div class="side-block">
+      <h4>操作说明</h4>
+      <p>单击行 = 跳转播放该句</p>
+      <p>双击歌词 = 编辑文本</p>
+      <p>双击时间 = 编辑时间戳</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<audio id="audioPlayer"></audio>
+
+<script>
+const $ = (s) => document.getElementById(s);
+const audioPlayer = $('audioPlayer');
+const playBtn = $('playBtn'), playIcon = $('playIcon');
+const progressBar = $('progressBar'), progressFill = $('progressFill');
+const currentTimeEl = $('currentTime'), durationEl = $('duration');
+const volumeSlider = $('volumeSlider'), speedSlider = $('speedSlider'), speedLabel = $('speedLabel');
+const editorBody = $('editorBody'), emptyState = $('emptyState');
+const toast = $('toast'), sidebarCurrent = $('sidebarCurrent');
+
+let lyrics = [];
+let currentIdx = -1;
+let editCell = null;
+
+const playPath = 'M8 5v14l11-7z';
+const pausePath = 'M6 4h4v16H6V4zm8 0h4v16h-4V4z';
+
+/* ── Helpers ── */
+function fmt(sec) {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+function fmtLRC(sec) {
+  const m = Math.floor(sec / 60);
+  const s = (sec % 60).toFixed(2);
+  return `[${m.toString().padStart(2,'0')}:${s.padStart(5,'0')}]`;
+}
+function parseTime(str) {
+  const m = str.match(/^(\d{1,2}):(\d{2})\.(\d{2})$/);
+  return m ? parseInt(m[1]) * 60 + parseInt(m[2]) + parseInt(m[3]) / 100 : null;
+}
+function showToast(msg) {
+  toast.textContent = msg; toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+/* ── Audio ── */
+$('audioFile').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (f) {
+    audioPlayer.src = URL.createObjectURL(f);
+    audioPlayer.play();
+  }
+});
+
+audioPlayer.addEventListener('timeupdate', () => {
+  if (!audioPlayer.duration) return;
+  progressFill.style.width = `${(audioPlayer.currentTime/audioPlayer.duration)*100}%`;
+  currentTimeEl.textContent = fmt(audioPlayer.currentTime);
+  updateActive();
+});
+audioPlayer.addEventListener('loadedmetadata', () => durationEl.textContent = fmt(audioPlayer.duration));
+audioPlayer.addEventListener('ended', () => updatePlay(false));
+
+function updatePlay(playing) {
+  playIcon.innerHTML = `<path d="${playing ? pausePath : playPath}"/>`;
+}
+playBtn.addEventListener('click', () => {
+  if (audioPlayer.paused) { audioPlayer.play(); updatePlay(true); }
+  else { audioPlayer.pause(); updatePlay(false); }
+});
+progressBar.addEventListener('click', (e) => {
+  const pct = (e.clientX - progressBar.getBoundingClientRect().left) / progressBar.offsetWidth;
+  audioPlayer.currentTime = pct * audioPlayer.duration;
+});
+volumeSlider.addEventListener('input', (e) => audioPlayer.volume = e.target.value);
+speedSlider.addEventListener('input', (e) => {
+  audioPlayer.playbackRate = parseFloat(e.target.value);
+  speedLabel.textContent = e.target.value + 'x';
+});
+
+/* ── LRC Import ── */
+$('lrcFile').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => { parseLRC(reader.result); render(); };
+  reader.readAsText(f);
+});
+
+function parseLRC(text) {
+  lyrics = [];
+  text.split('\n').forEach(line => {
+    line = line.trim();
+    if (!line) return;
+    if (/^\[(ti|ar|al):/.test(line)) return;
+    const matches = [...line.matchAll(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/g)];
+    for (const m of matches) {
+      const t = parseInt(m[1]) * 60 + parseInt(m[2]) + parseInt(m[3].length === 2 ? m[3]+'0' : m[3]) / 1000;
+      const txt = m[4].trim();
+      if (txt) lyrics.push({ time: t, text: txt });
+    }
+  });
+  lyrics.sort((a, b) => a.time - b.time);
+}
+
+/* ── Export ── */
+$('btnExport').addEventListener('click', () => {
+  if (!lyrics.length) return;
+  const out = lyrics.map(l => fmtLRC(l.time) + l.text).join('\n');
+  const blob = new Blob([out], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'output.lrc';
+  a.click();
+  showToast('LRC 已导出');
+});
+
+/* ── Render ── */
+function render() {
+  emptyState.style.display = lyrics.length ? 'none' : 'flex';
+  editorBody.innerHTML = lyrics.map((l, i) => `
+    <tr data-idx="${i}" class="${i === currentIdx ? 'active' : i < currentIdx ? 'passed' : ''}">
+      <td class="td-idx">${i + 1}</td>
+      <td class="td-time" ondblclick="startEdit(${i}, 'time')">${fmtLRC(l.time).slice(1,-1)}</td>
+      <td class="td-text" ondblclick="startEdit(${i}, 'text')">${esc(l.text)}</td>
+      <td class="td-actions">
+        <button class="action-btn" onclick="playLine(${i})" title="播放"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        <button class="action-btn del" onclick="deleteLine(${i})" title="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </td>
+    </tr>`).join('');
+
+  document.querySelectorAll('#editorBody tr').forEach(tr => {
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('input')) return;
+      const idx = parseInt(tr.dataset.idx);
+      audioPlayer.currentTime = lyrics[idx].time;
+      if (audioPlayer.paused) { audioPlayer.play(); updatePlay(true); }
+      currentIdx = idx;
+      updateActive();
+    });
+  });
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function updateActive() {
+  let idx = -1;
+  for (let i = lyrics.length - 1; i >= 0; i--) {
+    if (audioPlayer.currentTime >= lyrics[i].time) { idx = i; break; }
+  }
+  if (idx === currentIdx) return;
+  currentIdx = idx;
+  document.querySelectorAll('#editorBody tr').forEach(tr => {
+    const i = parseInt(tr.dataset.idx);
+    tr.classList.toggle('active', i === idx);
+    tr.classList.toggle('passed', i < idx);
+  });
+  sidebarCurrent.textContent = idx >= 0 ? `${idx+1}. ${lyrics[idx].text}` : '—';
+  if (idx >= 0) {
+    const el = editorBody.querySelector(`tr[data-idx="${idx}"]`);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+/* ── Edit ── */
+function startEdit(i, field) {
+  const tr = editorBody.querySelector(`tr[data-idx="${i}"]`);
+  if (!tr) return;
+  const td = field === 'time' ? tr.children[1] : tr.children[2];
+  const val = field === 'time' ? fmtLRC(lyrics[i].time).slice(1, -1) : lyrics[i].text;
+  td.innerHTML = `<input value="${esc(val)}" data-field="${field}" data-idx="${i}">`;
+  const inp = td.querySelector('input');
+  inp.focus();
+  inp.select();
+  editCell = inp;
+  inp.addEventListener('blur', () => commitEdit(i, field, inp.value));
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitEdit(i, field, inp.value); }
+    if (e.key === 'Escape') cancelEdit();
+  });
+}
+
+function commitEdit(i, field, raw) {
+  if (!editCell) return;
+  editCell = null;
+  if (field === 'time') {
+    const t = parseTime(raw);
+    if (t !== null) lyrics[i].time = t;
+  } else {
+    lyrics[i].text = raw.trim() || lyrics[i].text;
+  }
+  lyrics.sort((a, b) => a.time - b.time);
+  render();
+}
+
+function cancelEdit() {
+  editCell = null;
+  render();
+}
+
+/* ── Actions ── */
+function playLine(i) {
+  audioPlayer.currentTime = lyrics[i].time;
+  if (audioPlayer.paused) { audioPlayer.play(); updatePlay(true); }
+  currentIdx = i;
+  updateActive();
+}
+
+function deleteLine(i) {
+  lyrics.splice(i, 1);
+  render();
+}
+
+$('btnAddAbove').addEventListener('click', () => {
+  if (currentIdx < 0 || currentIdx >= lyrics.length) return;
+  lyrics.splice(currentIdx, 0, { time: lyrics[currentIdx].time, text: '' });
+  render();
+  startEdit(currentIdx, 'text');
+});
+$('btnAddBelow').addEventListener('click', () => {
+  if (currentIdx < 0 || currentIdx >= lyrics.length) {
+    lyrics.push({ time: lyrics.length ? lyrics[lyrics.length-1].time + 3 : 0, text: '' });
+    currentIdx = lyrics.length - 1;
+  } else {
+    lyrics.splice(currentIdx + 1, 0, { time: lyrics[currentIdx].time + 1, text: '' });
+    currentIdx++;
+  }
+  render();
+  startEdit(currentIdx, 'text');
+});
+$('btnDelete').addEventListener('click', () => {
+  if (currentIdx < 0 || currentIdx >= lyrics.length) return;
+  deleteLine(currentIdx);
+});
+$('btnSetStamp').addEventListener('click', () => {
+  if (currentIdx < 0 || currentIdx >= lyrics.length) return;
+  lyrics[currentIdx].time = Math.round(audioPlayer.currentTime * 100) / 100;
+  lyrics.sort((a, b) => a.time - b.time);
+  render();
+});
+
+/* ── Keyboard ── */
+document.addEventListener('keydown', (e) => {
+  if (editCell) return;
+  if (e.key === ' ' && e.target === document.body) { e.preventDefault(); playBtn.click(); return; }
+  if (e.key === 'ArrowUp') { e.preventDefault(); if (currentIdx > 0) { currentIdx--; updateActive(); } }
+  if (e.key === 'ArrowDown') { e.preventDefault(); if (currentIdx < lyrics.length - 1) { currentIdx++; updateActive(); } }
+  if (e.key === 'Enter' && currentIdx >= 0) { e.preventDefault(); startEdit(currentIdx, 'text'); }
+  if (e.key === 't' && currentIdx >= 0) { e.preventDefault(); $('btnSetStamp').click(); }
+  if (e.key === 'Delete' && currentIdx >= 0) { e.preventDefault(); $('btnDelete').click(); }
+});
+
+render();
+</script>
+</body>
+</html>
