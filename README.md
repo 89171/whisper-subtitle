@@ -1,110 +1,154 @@
-# Whisper LRC Generator
+# Whisper Subtitle Generator
 
 [中文](README_zh.md)
 
-Auto-generate LRC lyric files from MP3 audio using OpenAI Whisper.
+AI-powered subtitle and lyric generation for audio and video files using OpenAI Whisper.
+
+## What it does
+
+Drop in an audio or video file — get a perfectly timed **LRC** lyrics file for music, or **SRT** subtitle file for videos. Provide your own lyric text for best accuracy, or let Whisper transcribe everything from scratch.
 
 ## Features
 
-- **Whisper ASR** — Default `large-v3` model with excellent Chinese recognition; supports `tiny` ~ `turbo`
-- **Language hint** — `--language zh` passes hint to Whisper; `auto` detects from lyrics
-- **Lyric merging** — Consecutive lyrics at identical timestamps are merged into one line
-- **Vocal separation** — `--separate` extracts vocals with demucs; `--save-vocals` keeps the vocal track
-- **DTW alignment** — Global optimal alignment via dynamic time warping + pinyin similarity for Chinese
-- **Auto-install** — demucs automatically installed on first use; ffmpeg checked at startup
-- **Model caching** — Whisper models are cached across runs
-- **Batch processing** — `--batch` processes all MP3s in a directory
-- **LRC metadata** — Supports `[ti:]`, `[ar:]`, `[al:]` tags
-- **Web editor** — `edit/index.html` LRC editor with playback and editing
-- **MCP support** — MCP server for AI assistant integration
+| Feature | Detail |
+|---------|--------|
+| **Video → SRT subtitles** | MP4/MKV/MOV/WebM/AVI etc. — auto-extracts audio, outputs standard SRT |
+| **Audio → LRC lyrics** | MP3 → Whisper ASR → timestamped LRC for music players |
+| **Lyric alignment** | Supply a `.txt` lyrics file — DTW + pinyin similarity aligns text to audio precisely |
+| **Vocal separation** | `--separate` runs demucs to isolate vocals before recognition |
+| **Batch processing** | Process entire folders of mixed audio/video files at once |
+| **Chinese optimized** | pinyin-based alignment, FunASR fallback, `--language zh` hint |
+| **Auto-install** | Missing dependencies (demucs, funasr) install automatically on first use |
+| **MCP integration** | Call via AI assistants with the built-in MCP server |
+| **Playground** | `playground/index.html` — load video+SRT or audio+LRC, play, edit timestamps & text inline, add/delete lines, drag-and-drop, export |
 
-## Prerequisites
-
-- Python 3.8+
-- ffmpeg
-- PyTorch (Whisper dependency)
-
-### Installation
+## Quick Start
 
 ```bash
-brew install ffmpeg                     # macOS
-sudo apt install ffmpeg                 # Linux
 pip install openai-whisper torch mcp pypinyin
+brew install ffmpeg      # macOS; or apt install ffmpeg on Linux
 ```
 
-## Usage
+### Audio (LRC lyrics)
 
 ```bash
-# Audio only (no lyrics)
-python lrc_automaker.py song.mp3
-
-# With lyric file
-python lrc_automaker.py song.mp3 lyrics.txt
-
-# Chinese songs (recommended)
-python lrc_automaker.py song.mp3 lyrics.txt --language zh
-
-# Vocal separation
-python lrc_automaker.py song.mp3 lyrics.txt --separate
-
-# Vocal separation + save vocal track
-python lrc_automaker.py song.mp3 lyrics.txt --separate --save-vocals
-
-# Batch processing
-python lrc_automaker.py /path/to/music --batch
+python whisper_subtitle.py song.mp3                        # pure ASR
+python whisper_subtitle.py song.mp3 lyrics.txt              # with aligned lyrics
+python whisper_subtitle.py song.mp3 lyrics.txt --language zh  # Chinese
 ```
 
-### All options
+### Video (SRT subtitles)
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `input` | MP3 file or directory (with --batch) | required |
-| `lyrics_file` | Lyric text file (one line per sentence) | — |
-| `output_file` | Output LRC path | `<input>.lrc` |
-| `--whisper-model` | tiny/base/small/medium/large/large-v3/turbo | large-v3 |
-| `--language`, `-l` | zh/en/auto (hint to Whisper) | auto |
-| `--title`, `-t` | Song title (LRC metadata) | — |
-| `--artist`, `-a` | Artist name | — |
-| `--album`, `-al` | Album name | — |
-| `--separate`, `-s` | Vocal separation (auto-installs demucs) | — |
-| `--save-vocals` | Save vocal track as `<mp3>.vocals.wav` | — |
-| `--batch`, `-b` | Batch mode | — |
-| `--output-dir`, `-o` | Batch output directory | same as input |
-| `--verbose`, `-v` | Verbose logging | — |
+```bash
+python whisper_subtitle.py video.mp4 -f srt                  # pure ASR subtitles
+python whisper_subtitle.py video.mp4 lyrics.txt -f srt       # aligned subtitles
+python whisper_subtitle.py video.mp4 -f srt --separate       # vocal isolation first
+```
 
-## How it works
+### Advanced
+
+```bash
+python whisper_subtitle.py video.mp4 -f srt --separate --save-vocals  # keep vocal track
+python whisper_subtitle.py /path/to/files --batch -f srt              # batch SRT
+python whisper_subtitle.py /path/to/files --batch -f lrc              # batch LRC
+```
+
+## Supported Formats
+
+| Type | Input | Output |
+|------|-------|--------|
+| Audio | `.mp3` | `.lrc` / `.srt` |
+| Video | `.mp4` `.mkv` `.webm` `.mov` `.avi` `.flv` `.wmv` `.m4v` `.ts` | `.srt` / `.lrc` |
+
+### Output examples
+
+**LRC** — enhanced with end timestamps for karaoke-style display:
+```
+[ti:Moonlight]
+[ar:Artist Name]
+[00:12.50]<00:18.30>First line of lyrics
+[00:18.30]<00:24.00>Second line of lyrics
+```
+
+**SRT** — for video players (VLC, IINA, mpv, etc.):
+```
+1
+00:00:12,500 --> 00:00:18,300
+First line of subtitles
+
+2
+00:00:18,300 --> 00:00:24,000
+Second line of subtitles
+```
+
+## Playground
+
+Open `playground/index.html` in a browser — no server needed. Features:
+
+- **Drag & drop** or click to load media and subtitle files
+- **Video mode**: video playback with subtitle overlay
+- **Audio mode**: waveform animation + large lyric display (previous / current / next)
+- **Editable table**: inline edit start time, end time, and text (double-click)
+- **Toolbar**: add above/below, delete line, set current playback time as timestamp
+- **Export** to LRC or SRT (auto-detected from loaded format)
+- **Keyboard**: Space play/pause, ← → seek 5s, ↑ ↓ prev/next line, Enter edit, T set time, Delete remove
+
+## CLI Options
 
 ```
-MP3 → [--separate] demucs vocal isolation → ffmpeg 16kHz WAV
-     → Whisper speech recognition → [{start, text}, ...] segments
-     → [has lyrics] pinyin + DTW global alignment → merge same-timestamp lines
-     → write .lrc
+python whisper_subtitle.py <input> [lyrics] [output] [options]
+```
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `<input>` | path | *required* | Media file or directory (with `--batch`) |
+| `[lyrics]` | path | — | Lyric text file, one line per sentence |
+| `[output]` | path | `<input>.lrc` or `.srt` | Output file path |
+| `-f, --format` | `lrc` / `srt` | `lrc` | Output format |
+| `-l, --language` | `auto` / `zh` / `en` | `auto` | Language hint for Whisper |
+| `-s, --separate` | flag | — | Vocal separation with demucs |
+| `--save-vocals` | flag | — | Save isolated vocals as `<file>.vocals.wav` |
+| `-b, --batch` | flag | — | Process entire directory |
+| `-o, --output-dir` | path | same as input | Batch output directory |
+| `--whisper-model` | tiny~turbo | `large-v3` | Whisper model size |
+| `-t, --title` | string | — | Song title (LRC metadata) |
+| `-a, --artist` | string | — | Artist name (LRC metadata) |
+| `-al, --album` | string | — | Album name (LRC metadata) |
+| `-v, --verbose` | flag | — | Verbose logging |
+
+## Pipeline
+
+```
+Media file ──→ [video?] extract audio via ffmpeg
+            ──→ [--separate?] demucs vocal isolation
+            ──→ 16kHz mono WAV → Whisper ASR
+            ──→ [lyrics?] DTW + pinyin alignment
+            ──→ write .lrc or .srt
 ```
 
 ## MCP Server
 
-Add `mcp_config.json` to your AI client's MCP configuration to use the `generate_lrc` tool.
+Add `mcp_config.json` to your AI client to enable the `generate_subtitle` tool.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `mp3_path` | string | Absolute path to MP3 (required) |
-| `lyrics_path` | string | Path to lyric file |
-| `output_path` | string | Output path |
-| `model_size` | string | tiny/base/small/medium/large/large-v3/turbo |
-| `title` | string | LRC title |
-| `artist` | string | LRC artist |
-| `album` | string | LRC album |
-| `separate` | boolean | Enable vocal separation |
+| `media_path` | string | Media file path (required) |
+| `lyrics_path` | string | Optional lyric file path |
+| `output_path` | string | Output file path |
+| `model_size` | string | Whisper model: `tiny` ~ `turbo` |
+| `format` | string | `lrc` or `srt` |
+| `language` | string | `auto` / `zh` / `en` |
+| `separate` | boolean | Vocal separation with demucs |
 | `save_vocals` | boolean | Save vocal track |
-| `language` | string | auto/zh/en |
+| `title` / `artist` / `album` | string | LRC metadata |
 
-## Project structure
+## Project Structure
 
 ```
-├── lrc_automaker.py    # Main program
-├── mcp_server.py       # MCP server
-├── mcp_config.json     # MCP configuration
-├── edit/index.html     # Web editor
+├── whisper_subtitle.py     # Core engine
+├── mcp_server.py           # MCP server
+├── mcp_config.json         # MCP client config
+├── playground/index.html   # Playground (video/audio + subtitle with editing)
 └── requirements.txt
 ```
 

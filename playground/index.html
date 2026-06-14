@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Whisper Subtitle — Playground &amp; Editor</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#0f0f0f;
+  --surface:#1a1a1a;
+  --surface2:#242424;
+  --border:#2a2a2a;
+  --text:#e8e8e8;
+  --text2:#999;
+  --text3:#555;
+  --accent:#3b82f6;
+  --accent-dim:rgba(59,130,246,.12);
+  --danger:#ef4444;
+  --radius:8px;
+  --radius-sm:6px;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  height:100vh;display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* ── Header ── */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:46px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;gap:10px;
+}
+.header-left{display:flex;align-items:center;gap:10px;}
+.logo{font-size:15px;font-weight:700;color:var(--text);}
+.logo span{color:var(--accent);}
+.badge{
+  font-size:11px;padding:2px 8px;border-radius:99px;
+  background:var(--accent-dim);color:var(--accent);font-weight:500;
+}
+
+.header-actions{display:flex;gap:6px;align-items:center;}
+.btn{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--surface2);
+  color:var(--text2);font-size:12px;cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn svg{width:13px;height:13px;opacity:.7;}
+.btn input{display:none;}
+.btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.btn-export{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+  font-weight:600;padding:5px 16px;
+}
+.btn-export:hover{opacity:.85;color:#fff;}
+.btn-export svg{fill:#fff;opacity:1;}
+.btn-danger:hover{border-color:var(--danger);color:var(--danger);}
+
+/* ── Main ── */
+.main{
+  flex:1;display:flex;overflow:hidden;min-height:0;
+}
+
+/* ── Player ── */
+.player-area{
+  flex:1;display:flex;flex-direction:column;overflow:hidden;
+  background:#000;position:relative;min-width:0;
+}
+.video-container{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.video-container video{max-width:100%;max-height:100%;}
+.video-container.audio-mode{
+  background:linear-gradient(135deg,#0a0a0a 0%,#111827 50%,#0a0a0a 100%);
+}
+
+.sub-overlay{
+  position:absolute;bottom:60px;left:50%;transform:translateX(-50%);
+  max-width:90%;text-align:center;pointer-events:none;z-index:5;
+}
+.sub-overlay .sub-line{
+  display:inline-block;padding:6px 20px;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  border-radius:6px;font-size:28px;font-weight:600;line-height:1.4;
+  color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+
+.lyric-display{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:8px;padding:40px;
+}
+.lyric-prev{font-size:18px;color:var(--text3);}
+.lyric-now{
+  font-size:36px;font-weight:700;color:var(--accent);
+  text-align:center;line-height:1.3;max-width:80%;transition:color .3s;
+}
+.lyric-next{font-size:18px;color:var(--text3);}
+
+.wave-bars{display:flex;align-items:flex-end;gap:4px;height:56px;margin-bottom:20px;}
+.wave-bar{
+  width:4px;border-radius:2px;background:var(--accent);
+  animation:wave 1.2s ease-in-out infinite;
+}
+.wave-bar:nth-child(2){animation-delay:.1s}.wave-bar:nth-child(3){animation-delay:.2s}
+.wave-bar:nth-child(4){animation-delay:.3s}.wave-bar:nth-child(5){animation-delay:.4s}
+.wave-bar:nth-child(6){animation-delay:.5s}.wave-bar:nth-child(7){animation-delay:.6s}
+.wave-bar:nth-child(8){animation-delay:.7s}.wave-bar:nth-child(9){animation-delay:.8s}
+@keyframes wave{0%,100%{height:10px}50%{height:50px}}
+.playing .wave-bar{animation-play-state:running;}
+.paused .wave-bar{animation-play-state:paused;height:10px}
+
+/* ── Controls ── */
+.controls{
+  height:48px;border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:10px;
+  flex-shrink:0;background:var(--surface);
+}
+.ctrl-btn{
+  width:30px;height:30px;border:none;background:none;
+  color:var(--text);cursor:pointer;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:background .15s;
+}
+.ctrl-btn:hover{background:var(--surface2);}
+.ctrl-btn svg{width:16px;height:16px;fill:currentColor;}
+
+.ctrl-time{font-size:12px;color:var(--text2);min-width:40px;text-align:center;font-variant-numeric:tabular-nums;flex-shrink:0;}
+.ctrl-time.sep{min-width:8px;}
+
+.progress-wrap{flex:1;height:18px;display:flex;align-items:center;cursor:pointer;}
+.progress-track{width:100%;height:4px;background:var(--surface2);border-radius:2px;position:relative;overflow:visible;}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;width:0%;position:relative;}
+.progress-fill::after{
+  content:'';position:absolute;right:-5px;top:50%;transform:translateY(-50%);
+  width:10px;height:10px;border-radius:50%;background:var(--accent);
+  opacity:0;transition:opacity .15s;
+}
+.progress-wrap:hover .progress-fill::after{opacity:1;}
+
+.ctrl-vol-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.ctrl-vol{width:60px;height:3px;-webkit-appearance:none;appearance:none;background:var(--surface2);border-radius:2px;cursor:pointer;}
+.ctrl-vol::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--text);}
+
+.meta-info{font-size:11px;color:var(--text3);flex-shrink:0;min-width:50px;text-align:right;font-variant-numeric:tabular-nums;}
+
+/* ── Editor Panel ── */
+.editor-panel{
+  width:420px;border-left:1px solid var(--border);
+  background:var(--surface);display:flex;flex-direction:column;
+  flex-shrink:0;
+}
+.editor-toolbar{
+  display:flex;align-items:center;padding:4px 12px;gap:4px;
+  border-bottom:1px solid var(--border);flex-shrink:0;height:34px;
+}
+.editor-toolbar .btn{padding:3px 10px;font-size:12px;}
+
+.editor-table-wrap{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+}
+.editor-table-wrap::-webkit-scrollbar{width:4px;}
+.editor-table-wrap::-webkit-scrollbar-track{background:transparent;}
+.editor-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+.editor-table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.editor-table th{
+  position:sticky;top:0;background:var(--surface);
+  font-size:11px;font-weight:500;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.04em;
+  padding:6px 12px;border-bottom:1px solid var(--border);
+  text-align:left;z-index:2;
+}
+.editor-table th:nth-child(1){width:32px;text-align:center;}
+.editor-table th:nth-child(2){width:88px;}
+.editor-table th:nth-child(3){width:88px;}
+.editor-table th:nth-child(4){}
+.editor-table th:nth-child(5){width:52px;text-align:center;}
+
+.editor-table td{
+  padding:5px 12px;border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:13px;line-height:1.6;
+}
+.editor-table tr{cursor:pointer;transition:background .1s;}
+.editor-table tr:hover{background:var(--surface2);}
+.editor-table tr.active{background:var(--accent-dim);}
+.editor-table tr.active td:first-child{border-left:2px solid var(--accent);padding-left:10px;}
+.editor-table tr.passed{opacity:.35;}
+.editor-table tr.active.passed{opacity:1;}
+
+.td-idx{text-align:center;color:var(--text3);font-size:11px;user-select:none;}
+.td-time{font-family:'SF Mono','Fira Code',monospace;color:var(--text2);font-size:12px;}
+.td-time.hidden{display:none;}
+.td-text{font-size:13px;}
+.td-text input,.td-time input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);padding:2px 6px;border-radius:3px;font:inherit;outline:none;
+}
+.td-time input{width:80px;font-family:'SF Mono','Fira Code',monospace;font-size:12px;}
+.td-text input:focus,.td-time input:focus{border-color:var(--accent);}
+
+.td-act{text-align:center;white-space:nowrap;}
+.act-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border:none;background:none;color:var(--text3);
+  cursor:pointer;border-radius:3px;vertical-align:middle;
+}
+.act-btn:hover{background:var(--surface2);color:var(--text);}
+.act-btn.del:hover{color:var(--danger);}
+.act-btn svg{width:12px;height:12px;}
+
+.editor-table tr.active .td-time{color:var(--accent);}
+.editor-table tr.active .td-text{font-weight:600;}
+
+/* ── Empty ── */
+.empty{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;color:var(--text3);gap:14px;
+  font-size:14px;text-align:center;padding:40px;height:100%;
+}
+.empty svg{width:40px;height:40px;opacity:.25;}
+.empty p{margin:0;font-size:14px;color:var(--text3);line-height:1.6;}
+.drop-hint{font-size:13px;color:var(--text3);}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--text);color:var(--bg);
+  padding:8px 20px;border-radius:var(--radius-sm);
+  font-size:13px;z-index:100;
+  opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">Whisper <span>Subtitle</span></div>
+    <div class="badge">Playground</div>
+  </div>
+  <div class="header-actions">
+    <label class="btn" id="btnMedia">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 3 9 21"/></svg>
+      加载媒体
+      <input type="file" id="mediaFile" accept="audio/*,video/*">
+    </label>
+    <label class="btn" id="btnSub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      加载字幕
+      <input type="file" id="subFile" accept=".lrc,.srt,.vtt,text/plain">
+    </label>
+    <button class="btn btn-export" id="btnExport">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+      导出
+    </button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="player-area">
+    <div class="video-container audio-mode" id="videoContainer">
+      <div class="lyric-display" id="lyricDisplay">
+        <div class="wave-bars paused" id="waveBars">
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        </div>
+        <div class="lyric-prev" id="lyricPrev"></div>
+        <div class="lyric-now" id="lyricNow">拖入文件或点击上方按钮加载</div>
+        <div class="lyric-next" id="lyricNext"></div>
+      </div>
+      <video id="videoPlayer" style="display:none;" crossorigin="anonymous"></video>
+      <div class="sub-overlay" id="subOverlay"></div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl-btn" id="playBtn" title="Space 播放/暂停">
+        <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <span class="ctrl-time" id="currentTime">0:00</span>
+      <span class="ctrl-time sep">/</span>
+      <span class="ctrl-time" id="duration">0:00</span>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="ctrl-vol-wrap">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--text3)" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <input type="range" class="ctrl-vol" id="volumeSlider" min="0" max="1" step="0.01" value="0.8">
+      </div>
+      <span class="meta-info" id="metaInfo"></span>
+    </div>
+  </div>
+
+  <div class="editor-panel" id="editorPanel">
+    <div class="editor-toolbar" id="editorToolbar">
+      <span style="font-size:12px;color:var(--text3);margin-right:auto;padding-left:4px;">编辑</span>
+      <button class="btn" id="btnAddAbove" title="当前行上方插入">+ 上方</button>
+      <button class="btn" id="btnAddBelow" title="当前行下方插入">+ 下方</button>
+      <button class="btn btn-danger" id="btnDelete" title="Delete 删除">删除</button>
+      <button class="btn" id="btnSetStamp" title="T 设当前时间">设时间</button>
+    </div>
+    <div class="editor-table-wrap" id="editorScroll">
+      <table class="editor-table">
+        <thead id="tableHead">
+          <tr>
+            <th>#</th>
+            <th>开始</th>
+            <th id="thEnd">结束</th>
+            <th>字幕</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="editorBody"></tbody>
+      </table>
+      <div class="empty" id="emptyState">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <p>加载字幕文件<br><span class="drop-hint">支持 SRT / LRC 格式</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<audio id="audioPlayer" style="display:none;" crossorigin="anonymous"></audio>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.getElementById(s);
+const videoPlayer = $('videoPlayer');
+const audioPlayer = $('audioPlayer');
+let activePlayer = audioPlayer;
+
+const playBtn = $('playBtn'), playIcon = $('playIcon');
+const progressWrap = $('progressWrap'), progressFill = $('progressFill');
+const currentTimeEl = $('currentTime'), durationEl = $('duration');
+const volumeSlider = $('volumeSlider');
+const videoContainer = $('videoContainer');
+const subOverlay = $('subOverlay');
+const lyricDisplay = $('lyricDisplay');
+const lyricPrev = $('lyricPrev'), lyricNow = $('lyricNow'), lyricNext = $('lyricNext');
+const waveBars = $('waveBars');
+const metaInfo = $('metaInfo');
+const editorBody = $('editorBody'), emptyState = $('emptyState'), thEnd = $('thEnd');
+const toast = $('toast');
+
+let subtitles = [];
+let currentIdx = -1;
+let isVideo = false;
+let isSRT = false;
+let editCell = null;
+
+const playPath = 'M8 5v14l11-7z';
+const pausePath = 'M6 4h4v16H6V4zm8 0h4v16h-4V4z';
+
+/* ──────────────────── Helpers ──────────────────── */
+
+function fmt(sec){
+  if(!isFinite(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+function fmtFull(sec){
+  if(!isFinite(sec)) return '00:00:00';
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+function fmtLRC(sec){
+  const m = Math.floor(sec/60), s = (sec%60).toFixed(2);
+  return `${m.toString().padStart(2,'0')}:${s.padStart(5,'0')}`;
+}
+function fmtSRT(sec){
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+  const ms = Math.floor((sec%1)*1000);
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')},${ms.toString().padStart(3,'0')}`;
+}
+function parseSRTTime(str){
+  const m = str.match(/(\d+):(\d+):(\d+)[,.](\d+)/);
+  return m ? parseInt(m[1])*3600 + parseInt(m[2])*60 + parseInt(m[3]) + parseInt(m[4])/1000 : null;
+}
+function parseLRCTime(str){
+  const m = str.match(/^(\d{1,3}):(\d{2})\.(\d{2,3})$/);
+  return m ? parseInt(m[1])*60 + parseInt(m[2]) + parseInt(m[3].length===2 ? m[3]+'0' : m[3])/1000 : null;
+}
+function esc(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function showToast(msg){
+  toast.textContent = msg; toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1800);
+}
+function getTime(){ return activePlayer.currentTime || 0; }
+function getDuration(){ return activePlayer.duration || 0; }
+function setTime(t){ activePlayer.currentTime = t; }
+function seekTo(t){ setTime(t); if(activePlayer.paused){ activePlayer.play(); updatePlay(true); } }
+
+/* ──────────────────── Media ──────────────────── */
+
+$('mediaFile').addEventListener('change', e => { const f = e.target.files[0]; if(f) loadMedia(f); });
+$('subFile').addEventListener('change', e => { const f = e.target.files[0]; if(f) loadSubtitle(f); });
+
+function loadMedia(file){
+  const url = URL.createObjectURL(file);
+  isVideo = file.type.startsWith('video/');
+  if(isVideo){
+    audioPlayer.src = '';
+    videoPlayer.style.display = ''; videoPlayer.src = url;
+    activePlayer = videoPlayer;
+    videoContainer.classList.remove('audio-mode');
+    lyricDisplay.style.display = 'none'; subOverlay.style.display = '';
+    metaInfo.textContent = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
+  } else {
+    videoPlayer.src = ''; videoPlayer.style.display = 'none';
+    audioPlayer.src = url;
+    activePlayer = audioPlayer;
+    videoContainer.classList.add('audio-mode');
+    lyricDisplay.style.display = ''; subOverlay.style.display = 'none';
+    metaInfo.textContent = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
+  }
+  $('btnMedia').classList.add('active');
+}
+
+function loadSubtitle(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = reader.result;
+    isSRT = text.includes('-->');
+    subtitles = isSRT ? parseSRT(text) : parseLRC(text);
+    currentIdx = -1;
+    renderTable();
+    $('btnSub').classList.add('active');
+    showToast(`已加载 ${subtitles.length} 条字幕`);
+  };
+  reader.readAsText(file);
+}
+
+/* ──────────────────── Parsers ──────────────────── */
+
+function parseSRT(text){
+  const items = [];
+  const blocks = text.replace(/\r\n/g,'\n').split(/\n\n+/);
+  for(const block of blocks){
+    const lines = block.trim().split('\n');
+    if(lines.length < 2) continue;
+    const tm = lines[1]?.match(/(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)/);
+    if(!tm) continue;
+    const start = parseInt(tm[1])*3600+parseInt(tm[2])*60+parseInt(tm[3])+parseInt(tm[4])/1000;
+    const end = parseInt(tm[5])*3600+parseInt(tm[6])*60+parseInt(tm[7])+parseInt(tm[8])/1000;
+    const text = lines.slice(2).join(' ').trim();
+    if(text) items.push({start, end, text});
+  }
+  return items;
+}
+
+function parseLRC(text){
+  const items = [];
+  text.split('\n').forEach(line => {
+    line = line.trim();
+    if(!line || /^\[(ti|ar|al):/.test(line)) return;
+    const matches = [...line.matchAll(/\[(\d{2}):(\d{2})\.(\d{2,3})\](?:<(\d{2}):(\d{2})\.(\d{2,3})>)?(.*)/g)];
+    for(const m of matches){
+      const t = parseInt(m[1])*60+parseInt(m[2])+parseInt(m[3].length===2?m[3]+'0':m[3])/1000;
+      const hasEnd = m[4] !== undefined && m[5] !== undefined && m[6] !== undefined;
+      const end = hasEnd ? parseInt(m[4])*60+parseInt(m[5])+parseInt(m[6].length===2?m[6]+'0':m[6])/1000 : t+3;
+      const txt = m[7].trim();
+      if(txt) items.push({start:t, end, text:txt});
+    }
+  });
+  items.sort((a,b)=>a.start-b.start);
+  return items;
+}
+
+/* ──────────────────── Render Table ──────────────────── */
+
+function renderTable(){
+  emptyState.style.display = subtitles.length ? 'none' : '';
+  thEnd.style.display = '';
+
+  if(!subtitles.length){ editorBody.innerHTML = ''; return; }
+
+  editorBody.innerHTML = subtitles.map((s,i) => {
+    const cls = i === currentIdx ? 'active' : i < currentIdx ? 'passed' : '';
+    return `<tr data-idx="${i}" class="${cls}" onclick="onRowClick(${i})">
+      <td class="td-idx">${i+1}</td>
+      <td class="td-time" ondblclick="startEdit(${i},'start')">${isSRT ? fmtSRT(s.start) : fmtLRC(s.start)}</td>
+      <td class="td-time" ondblclick="startEdit(${i},'end')">${isSRT ? fmtSRT(s.end) : fmtLRC(s.end)}</td>
+      <td class="td-text" ondblclick="startEdit(${i},'text')">${esc(s.text)}</td>
+      <td class="td-act">
+        <button class="act-btn" onclick="event.stopPropagation();playLine(${i})" title="播放">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+        <button class="act-btn del" onclick="event.stopPropagation();deleteLine(${i})" title="删除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  highlightTable();
+}
+
+function onRowClick(i){
+  seekTo(subtitles[i].start);
+  currentIdx = i;
+  highlightTable();
+  updateLyricDisplay();
+  updateSubOverlay();
+}
+
+function playLine(i){ onRowClick(i); }
+
+function highlightTable(){
+  document.querySelectorAll('#editorBody tr').forEach(tr => {
+    const i = parseInt(tr.dataset.idx);
+    tr.classList.toggle('active', i === currentIdx);
+    tr.classList.toggle('passed', i < currentIdx);
+  });
+  if(currentIdx >= 0){
+    const el = editorBody.querySelector(`tr[data-idx="${currentIdx}"]`);
+    if(el) el.scrollIntoView({block:'center',behavior:'smooth'});
+  }
+}
+
+/* ──────────────────── Edit ──────────────────── */
+
+function startEdit(i, field){
+  if(editCell) commitEdit();
+  const tr = editorBody.querySelector(`tr[data-idx="${i}"]`);
+  if(!tr) return;
+  const s = subtitles[i];
+  const colIdx = field==='start' ? 1 : field==='end' ? 2 : 3;
+  const td = tr.children[colIdx];
+  let val;
+  if(field === 'start') val = isSRT ? fmtSRT(s.start) : fmtLRC(s.start);
+  else if(field === 'end') val = isSRT ? fmtSRT(s.end) : fmtLRC(s.end);
+  else val = s.text;
+  td.innerHTML = `<input value="${esc(val)}" data-idx="${i}" data-field="${field}">`;
+  const inp = td.querySelector('input');
+  inp.focus(); inp.select();
+  editCell = {input:inp, idx:i, field};
+  inp.addEventListener('blur', () => commitEdit());
+  inp.addEventListener('keydown', e => {
+    if(e.key==='Enter'){ e.preventDefault(); commitEdit(); }
+    if(e.key==='Escape') cancelEdit();
+  });
+}
+
+function commitEdit(){
+  if(!editCell) return;
+  const {idx, field, input} = editCell;
+  const raw = input.value.trim();
+  if(field === 'text'){
+    if(raw) subtitles[idx].text = raw;
+  } else if(field === 'start'){
+    const t = isSRT ? parseSRTTime(raw) : parseLRCTime(raw);
+    if(t !== null) subtitles[idx].start = t;
+  } else if(field === 'end'){
+    const t = isSRT ? parseSRTTime(raw) : parseLRCTime(raw);
+    if(t !== null) subtitles[idx].end = t;
+  }
+  editCell = null;
+  if(!isSRT) subtitles.sort((a,b)=>a.start-b.start);
+  renderTable();
+}
+
+function cancelEdit(){
+  editCell = null;
+  renderTable();
+}
+
+/* ──────────────────── Toolbar Actions ──────────────────── */
+
+$('btnAddAbove').addEventListener('click', () => {
+  if(currentIdx<0||currentIdx>=subtitles.length) return;
+  const t = subtitles[currentIdx].start;
+  subtitles.splice(currentIdx, 0, {start:t, end:t+3, text:''});
+  renderTable();
+  startEdit(currentIdx, 'text');
+});
+
+$('btnAddBelow').addEventListener('click', () => {
+  if(currentIdx<0||currentIdx>=subtitles.length){
+    const t = subtitles.length ? subtitles[subtitles.length-1].start+3 : 0;
+    subtitles.push({start:t, end:t+3, text:''});
+    currentIdx = subtitles.length-1;
+  } else {
+    const t = subtitles[currentIdx].start;
+    subtitles.splice(currentIdx+1, 0, {start:t+1, end:t+4, text:''});
+    currentIdx++;
+  }
+  renderTable();
+  startEdit(currentIdx, 'text');
+});
+
+$('btnDelete').addEventListener('click', () => {
+  if(currentIdx<0||currentIdx>=subtitles.length) return;
+  deleteLine(currentIdx);
+});
+
+$('btnSetStamp').addEventListener('click', () => {
+  if(currentIdx<0||currentIdx>=subtitles.length) return;
+  subtitles[currentIdx].start = Math.round(getTime()*100)/100;
+  if(!isSRT) subtitles.sort((a,b)=>a.start-b.start);
+  renderTable();
+});
+
+function deleteLine(i){
+  subtitles.splice(i,1);
+  if(currentIdx >= subtitles.length) currentIdx = subtitles.length - 1;
+  renderTable();
+}
+
+/* ──────────────────── Export ──────────────────── */
+
+$('btnExport').addEventListener('click', () => {
+  if(!subtitles.length) return;
+  let out, ext;
+  if(isSRT){
+    out = subtitles.map((s,i) => `${i+1}\n${fmtSRT(s.start)} --> ${fmtSRT(s.end)}\n${s.text}\n`).join('\n');
+    ext = 'srt';
+  } else {
+    out = subtitles.map(s => `[${fmtLRC(s.start)}]<${fmtLRC(s.end)}>${s.text}`).join('\n');
+    ext = 'lrc';
+  }
+  const blob = new Blob([out], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `output.${ext}`;
+  a.click();
+  showToast(`已导出 output.${ext}`);
+});
+
+/* ──────────────────── Playback ──────────────────── */
+
+function updatePlay(playing){
+  playIcon.innerHTML = `<path d="${playing ? pausePath : playPath}"/>`;
+  waveBars.classList.toggle('playing', playing);
+  waveBars.classList.toggle('paused', !playing);
+}
+
+playBtn.addEventListener('click', () => {
+  if(!activePlayer.src) return;
+  if(activePlayer.paused){ activePlayer.play(); updatePlay(true); }
+  else { activePlayer.pause(); updatePlay(false); }
+});
+
+progressWrap.addEventListener('click', e => {
+  const pct = (e.clientX - progressWrap.getBoundingClientRect().left) / progressWrap.offsetWidth;
+  setTime(pct * getDuration());
+});
+
+volumeSlider.addEventListener('input', e => {
+  videoPlayer.volume = e.target.value;
+  audioPlayer.volume = e.target.value;
+});
+
+[videoPlayer, audioPlayer].forEach(p => {
+  p.addEventListener('timeupdate', () => {
+    if(p !== activePlayer) return;
+    const d = getDuration();
+    if(d){ progressFill.style.width = `${(getTime()/d)*100}%`; currentTimeEl.textContent = fmt(getTime()); }
+    updateActiveSub();
+  });
+  p.addEventListener('loadedmetadata', () => { if(p===activePlayer) durationEl.textContent = fmt(getDuration()); });
+  p.addEventListener('play', () => updatePlay(true));
+  p.addEventListener('pause', () => updatePlay(false));
+  p.addEventListener('ended', () => updatePlay(false));
+});
+
+/* ──────────────────── Active Tracking ──────────────────── */
+
+function updateActiveSub(){
+  const t = getTime();
+  let idx = -1;
+  for(let i=subtitles.length-1; i>=0; i--){
+    if(t >= subtitles[i].start){ idx = i; break; }
+  }
+  if(idx === currentIdx) return;
+  currentIdx = idx;
+
+  updateSubOverlay();
+  updateLyricDisplay();
+  highlightTable();
+}
+
+function updateSubOverlay(){
+  if(!isVideo || currentIdx<0){ subOverlay.innerHTML=''; return; }
+  subOverlay.innerHTML = `<div class="sub-line">${esc(subtitles[currentIdx].text)}</div>`;
+}
+
+function updateLyricDisplay(){
+  if(isVideo) return;
+  const prev = currentIdx>0 ? subtitles[currentIdx-1] : null;
+  const now = currentIdx>=0 ? subtitles[currentIdx] : null;
+  const next = currentIdx>=0 && currentIdx<subtitles.length-1 ? subtitles[currentIdx+1] : null;
+  lyricPrev.textContent = prev ? prev.text : '';
+  lyricNow.textContent = now ? now.text : '...';
+  lyricNext.textContent = next ? next.text : '';
+}
+
+/* ──────────────────── Keyboard ──────────────────── */
+
+document.addEventListener('keydown', e => {
+  if(editCell) return;
+  const tag = e.target.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA') return;
+
+  switch(e.key){
+    case ' ': e.preventDefault(); playBtn.click(); break;
+    case 'ArrowLeft': e.preventDefault(); setTime(Math.max(0,getTime()-5)); break;
+    case 'ArrowRight': e.preventDefault(); setTime(Math.min(getDuration(),getTime()+5)); break;
+    case 'ArrowUp':
+      e.preventDefault();
+      if(currentIdx>0){ currentIdx--; seekTo(subtitles[currentIdx].start); updateActiveSub(); }
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      if(currentIdx<subtitles.length-1){ currentIdx++; seekTo(subtitles[currentIdx].start); updateActiveSub(); }
+      break;
+    case 'Enter':
+      e.preventDefault();
+      if(currentIdx>=0) startEdit(currentIdx, 'text');
+      break;
+    case 't':
+    case 'T':
+      e.preventDefault();
+      if(currentIdx>=0) $('btnSetStamp').click();
+      break;
+    case 'Delete':
+    case 'Backspace':
+      e.preventDefault();
+      if(currentIdx>=0) $('btnDelete').click();
+      break;
+  }
+});
+
+/* ──────────────────── Drag & Drop ──────────────────── */
+
+document.addEventListener('dragover', e => { e.preventDefault(); });
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const files = e.dataTransfer.files;
+  if(!files.length) return;
+  for(const f of files){
+    if(f.type.startsWith('audio/')||f.type.startsWith('video/')){
+      loadMedia(f);
+    } else if(f.name.endsWith('.lrc')||f.name.endsWith('.srt')||f.name.endsWith('.vtt')){
+      loadSubtitle(f);
+    }
+  }
+});
+</script>
+</body>
+</html>
