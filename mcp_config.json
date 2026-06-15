@@ -1,12 +1,12 @@
 {
   "mcpServers": {
-    "whisper-subtitle-generator": {
+    "subtitle-maker": {
       "command": "python3",
       "args": [
         "mcp_server.py"
       ],
       "env": {},
-      "description": "使用 Whisper AI 将音频/视频文件转换为 LRC 歌词或 SRT 外挂字幕"
+      "description": "将音频/视频文件转换为 LRC 歌词或 SRT 外挂字幕"
     }
   }
 }

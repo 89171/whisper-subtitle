@@ -1,4 +1,4 @@
-# Whisper Subtitle Generator
+# Subtitle Maker
 
 [中文](README_zh.md)
 
@@ -32,25 +32,25 @@ brew install ffmpeg      # macOS; or apt install ffmpeg on Linux
 ### Audio (LRC lyrics)
 
 ```bash
-python whisper_subtitle.py song.mp3                        # pure ASR
-python whisper_subtitle.py song.mp3 lyrics.txt              # with aligned lyrics
-python whisper_subtitle.py song.mp3 lyrics.txt --language zh  # Chinese
+python subtitle_maker.py song.mp3                        # pure ASR
+python subtitle_maker.py song.mp3 lyrics.txt              # with aligned lyrics
+python subtitle_maker.py song.mp3 lyrics.txt --language zh  # Chinese
 ```
 
 ### Video (SRT subtitles)
 
 ```bash
-python whisper_subtitle.py video.mp4 -f srt                  # pure ASR subtitles
-python whisper_subtitle.py video.mp4 lyrics.txt -f srt       # aligned subtitles
-python whisper_subtitle.py video.mp4 -f srt --separate       # vocal isolation first
+python subtitle_maker.py video.mp4 -f srt                  # pure ASR subtitles
+python subtitle_maker.py video.mp4 lyrics.txt -f srt       # aligned subtitles
+python subtitle_maker.py video.mp4 -f srt --separate       # vocal isolation first
 ```
 
 ### Advanced
 
 ```bash
-python whisper_subtitle.py video.mp4 -f srt --separate --save-vocals  # keep vocal track
-python whisper_subtitle.py /path/to/files --batch -f srt              # batch SRT
-python whisper_subtitle.py /path/to/files --batch -f lrc              # batch LRC
+python subtitle_maker.py video.mp4 -f srt --separate --save-vocals  # keep vocal track
+python subtitle_maker.py /path/to/files --batch -f srt              # batch SRT
+python subtitle_maker.py /path/to/files --batch -f lrc              # batch LRC
 ```
 
 ## Supported Formats
@@ -96,7 +96,7 @@ Open `playground/index.html` in a browser — no server needed. Features:
 ## CLI Options
 
 ```
-python whisper_subtitle.py <input> [lyrics] [output] [options]
+python subtitle_maker.py <input> [lyrics] [output] [options]
 ```
 
 | Option | Values | Default | Description |
@@ -145,7 +145,7 @@ Add `mcp_config.json` to your AI client to enable the `generate_subtitle` tool.
 ## Project Structure
 
 ```
-├── whisper_subtitle.py     # Core engine
+├── subtitle_maker.py       # Core engine
 ├── mcp_server.py           # MCP server
 ├── mcp_config.json         # MCP client config
 ├── playground/index.html   # Playground (video/audio + subtitle with editing)

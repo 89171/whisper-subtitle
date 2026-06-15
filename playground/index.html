@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Whisper Subtitle — Playground &amp; Editor</title>
+<title>Subtitle Maker — Playground</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 
 :root{
-  --bg:#0f0f0f;
-  --surface:#1a1a1a;
-  --surface2:#242424;
-  --border:#2a2a2a;
-  --text:#e8e8e8;
-  --text2:#999;
-  --text3:#555;
-  --accent:#3b82f6;
-  --accent-dim:rgba(59,130,246,.12);
-  --danger:#ef4444;
+  --bg:#fff;
+  --surface:#fafafa;
+  --surface2:#f0f0f0;
+  --border:#e0e0e0;
+  --text:#111;
+  --text2:#555;
+  --text3:#999;
+  --accent:#111;
+  --accent-dim:rgba(0,0,0,.06);
+  --danger:#888;
   --radius:8px;
   --radius-sm:6px;
 }
@@ -57,11 +57,11 @@ body{
 .btn input{display:none;}
 .btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 .btn-export{
-  background:var(--accent);color:#fff;border-color:var(--accent);
+  background:var(--text);color:var(--bg);border-color:var(--text);
   font-weight:600;padding:5px 16px;
 }
-.btn-export:hover{opacity:.85;color:#fff;}
-.btn-export svg{fill:#fff;opacity:1;}
+.btn-export:hover{opacity:.85;color:var(--bg);}
+.btn-export svg{fill:var(--bg);opacity:1;}
 .btn-danger:hover{border-color:var(--danger);color:var(--danger);}
 
 /* ── Main ── */
@@ -80,7 +80,7 @@ body{
 }
 .video-container video{max-width:100%;max-height:100%;}
 .video-container.audio-mode{
-  background:linear-gradient(135deg,#0a0a0a 0%,#111827 50%,#0a0a0a 100%);
+  background:linear-gradient(135deg,#f5f5f5 0%,#e8ecf1 50%,#f5f5f5 100%);
 }
 
 .sub-overlay{
@@ -154,7 +154,7 @@ body{
 
 /* ── Editor Panel ── */
 .editor-panel{
-  width:420px;border-left:1px solid var(--border);
+  width:550px;border-left:1px solid var(--border);
   background:var(--surface);display:flex;flex-direction:column;
   flex-shrink:0;
 }
@@ -179,22 +179,22 @@ body{
   padding:6px 12px;border-bottom:1px solid var(--border);
   text-align:left;z-index:2;
 }
-.editor-table th:nth-child(1){width:32px;text-align:center;}
-.editor-table th:nth-child(2){width:88px;}
-.editor-table th:nth-child(3){width:88px;}
+.editor-table th:nth-child(1){width:36px;text-align:center;}
+.editor-table th:nth-child(2){width:105px;}
+.editor-table th:nth-child(3){width:105px;}
 .editor-table th:nth-child(4){}
-.editor-table th:nth-child(5){width:52px;text-align:center;}
+.editor-table th:nth-child(5){width:60px;text-align:center;}
 
 .editor-table td{
-  padding:5px 12px;border-bottom:1px solid rgba(255,255,255,.04);
-  font-size:13px;line-height:1.6;
+  padding:7px 16px;border-bottom:1px solid var(--border);
+  font-size:13px;line-height:1.7;
 }
 .editor-table tr{cursor:pointer;transition:background .1s;}
 .editor-table tr:hover{background:var(--surface2);}
 .editor-table tr.active{background:var(--accent-dim);}
 .editor-table tr.active td:first-child{border-left:2px solid var(--accent);padding-left:10px;}
-.editor-table tr.passed{opacity:.35;}
-.editor-table tr.active.passed{opacity:1;}
+.editor-table tr.passed{color:var(--text3);}
+.editor-table tr.active.passed{color:var(--text);}
 
 .td-idx{text-align:center;color:var(--text3);font-size:11px;user-select:none;}
 .td-time{font-family:'SF Mono','Fira Code',monospace;color:var(--text2);font-size:12px;}
@@ -245,7 +245,7 @@ body{
 
 <div class="header">
   <div class="header-left">
-    <div class="logo">Whisper <span>Subtitle</span></div>
+    <div class="logo">Subtitle <span>Maker</span></div>
     <div class="badge">Playground</div>
   </div>
   <div class="header-actions">

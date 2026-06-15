@@ -7,12 +7,12 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from whisper_subtitle import generate_subtitle, generate_lrc, setup_logging
+from subtitle_maker import generate_subtitle, generate_lrc, setup_logging
 
 setup_logging()
 logger = logging.getLogger("mcp_server")
 
-server = Server("whisper-subtitle-generator")
+server = Server("subtitle-maker")
 
 
 @server.list_tools()
@@ -92,7 +92,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     output_path = arguments.get("output_path")
     model_size = arguments.get("model_size", "large")
 
-    from whisper_subtitle import LrcMeta
+    from subtitle_maker import LrcMeta
     meta = LrcMeta(
         title=arguments.get("title"),
         artist=arguments.get("artist"),
